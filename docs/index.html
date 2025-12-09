@@ -1,1 +1,838 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lernpfad Ökologie und Ökonomie</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+            color: white;
+            padding: 25px 40px;
+            text-align: center;
+            position: relative;
+        }
+
+        .back-button {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-50%) translateX(-3px);
+        }
+
+        header h1 {
+            font-size: 2.2em;
+            margin-bottom: 5px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        .flowchart-container {
+            max-width: 1100px;
+            margin: 0 auto 15px;
+            padding: 10px 10px;
+        }
+
+        .flow-row {
+            display: flex;
+            justify-content: center;
+            margin: 8px 0;
+        }
+
+        .flow-row.horizontal {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: nowrap;
+        }
+
+        .flow-row.reverse {
+            flex-direction: row;
+        }
+
+        .arrow-right {
+            font-size: 2.5em;
+            color: #4CAF50;
+            font-weight: bold;
+            animation: slide-right 2s infinite;
+            flex-shrink: 0;
+        }
+
+        .arrow-left {
+            font-size: 2.5em;
+            color: #4CAF50;
+            font-weight: bold;
+            animation: slide-left 2s infinite;
+            flex-shrink: 0;
+        }
+
+        .arrow-turn-down {
+            text-align: right;
+            font-size: 2.5em;
+            color: #4CAF50;
+            margin: 5px 0;
+            animation: bounce-down 2s infinite;
+        }
+
+        @keyframes slide-right {
+            0%, 100% {
+                transform: translateX(0);
+            }
+            50% {
+                transform: translateX(10px);
+            }
+        }
+
+        @keyframes slide-left {
+            0%, 100% {
+                transform: translateX(0);
+            }
+            50% {
+                transform: translateX(-10px);
+            }
+        }
+
+        @keyframes bounce-down {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(8px);
+            }
+        }
+
+        .flow-card {
+            max-width: 260px;
+            min-width: 220px;
+            flex-shrink: 0;
+        }
+
+        .card {
+            background: white;
+            border: 3px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: 150px;
+            justify-content: center;
+        }
+
+        .card:hover:not(.locked) {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+        }
+
+        .card.active {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-color: #2e7d32;
+            border-width: 3px;
+            box-shadow: 0 4px 15px rgba(46, 125, 50, 0.3);
+        }
+
+        .card.completed {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-color: #2196F3;
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+        }
+
+        .card.locked {
+            background: #f5f5f5;
+            border-color: #e0e0e0;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .card.highlight-final::before {
+            content: '🎯';
+            position: absolute;
+            top: -18px;
+            right: -18px;
+            font-size: 2em;
+            animation: rotate-trophy 3s infinite;
+        }
+
+        @keyframes rotate-trophy {
+            0%, 100% {
+                transform: rotate(-10deg);
+            }
+            50% {
+                transform: rotate(10deg);
+            }
+        }
+
+        .card-number {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .card.active .card-number {
+            background: linear-gradient(135deg, #4CAF50 0%, #2e7d32 100%);
+            animation: pulse-number 2s infinite;
+        }
+
+        .card.completed .card-number {
+            background: linear-gradient(135deg, #2196F3 0%, #1976d2 100%);
+        }
+
+        @keyframes pulse-number {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+            }
+        }
+
+        .card-content {
+            width: 100%;
+        }
+
+        .card-icon {
+            font-size: 2.2em;
+            margin-bottom: 6px;
+        }
+
+        .card-title {
+            font-size: 0.95em;
+            font-weight: bold;
+            color: #1b5e20;
+            line-height: 1.2;
+        }
+
+        .card.locked .card-title {
+            color: #999;
+        }
+
+        @media (max-width: 1024px) {
+            .flow-row.horizontal {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .arrow-right, .arrow-left {
+                display: none;
+            }
+
+            .flow-card {
+                max-width: 250px;
+                min-width: 220px;
+            }
+
+            .card {
+                height: 160px;
+                padding: 12px;
+            }
+
+            .card-icon {
+                font-size: 2em;
+            }
+
+            .card-title {
+                font-size: 0.95em;
+            }
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            .back-button {
+                position: static;
+                transform: none;
+                margin-bottom: 15px;
+                display: inline-flex;
+            }
+
+            .back-button:hover {
+                transform: translateX(-3px);
+            }
+
+            header {
+                padding: 20px;
+            }
+
+            main {
+                padding: 20px;
+            }
+        }
+
+        .progress-section {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        .progress-section h2 {
+            color: #2e7d32;
+            margin-bottom: 12px;
+            font-size: 1.3em;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            height: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+
+        .progress-fill {
+            background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+            height: 100%;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+            color: white;
+        }
+
+        .btn-info {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-success {
+            background: #4CAF50;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="../index.html" class="back-button">
+                <span>←</span>
+                <span>Zurück zur Hauptseite</span>
+            </a>
+            <h1>🌍 Lernpfad: Ökologie und Ökonomie</h1>
+            <p>Erkunde die Zusammenhänge zwischen Wirtschaft, Umwelt und Klimawandel</p>
+        </header>
+
+        <main>
+            <div class="flowchart-container">
+                <!-- Erste Reihe: Schritte 1, 2, 3 -->
+                <div class="flow-row horizontal">
+                    <div class="card active flow-card" onclick="openPoint(1)" data-step="1">
+                        <div class="card-number">1</div>
+                        <div class="card-content">
+                            <div class="card-icon">🌱</div>
+                            <div class="card-title">Ökologie & Ökonomie</div>
+                        </div>
+                    </div>
+
+                    <div class="arrow-right">→</div>
+
+                    <div class="card locked flow-card" onclick="openPoint(2)" data-step="2">
+                        <div class="card-number">2</div>
+                        <div class="card-content">
+                            <div class="card-icon">📊</div>
+                            <div class="card-title">Klimaveränderung</div>
+                        </div>
+                    </div>
+
+                    <div class="arrow-right">→</div>
+
+                    <div class="card locked flow-card" onclick="openPoint(3)" data-step="3">
+                        <div class="card-number">3</div>
+                        <div class="card-content">
+                            <div class="card-icon">🎧</div>
+                            <div class="card-title">Ursachen</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pfeil nach unten zur zweiten Reihe -->
+                <div class="arrow-turn-down">
+                    <span style="float: right; margin-right: 150px;">↓</span>
+                </div>
+
+                <!-- Zweite Reihe: Schritte 6, 5, 4 (rückwärts) -->
+                <div class="flow-row horizontal reverse">
+                    <div class="card locked flow-card highlight-final" onclick="openPoint(6)" data-step="6">
+                        <div class="card-number">6</div>
+                        <div class="card-content">
+                            <div class="card-icon">💡</div>
+                            <div class="card-title">Handlungsmöglichkeiten</div>
+                        </div>
+                    </div>
+
+                    <div class="arrow-left">←</div>
+
+                    <div class="card locked flow-card" onclick="openPoint(5)" data-step="5">
+                        <div class="card-number">5</div>
+                        <div class="card-content">
+                            <div class="card-icon">🦋</div>
+                            <div class="card-title">Biodiversität</div>
+                        </div>
+                    </div>
+
+                    <div class="arrow-left">←</div>
+
+                    <div class="card locked flow-card" onclick="openPoint(4)" data-step="4">
+                        <div class="card-number">4</div>
+                        <div class="card-content">
+                            <div class="card-icon">🌡️</div>
+                            <div class="card-title">Folgen</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="progress-section">
+                <h2>📊 Dein Fortschritt</h2>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%">0%</div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-primary" onclick="downloadPDF()">📄 Gesamt-PDF herunterladen</button>
+                    <button class="btn-info" onclick="downloadJSON()">💾 Backup herunterladen</button>
+                    <button class="btn-success" onclick="loadBackup()">📂 Backup laden</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <input type="file" id="fileInput" accept=".json" style="display: none;" onchange="handleFileUpload(event)">
+
+    <script>
+        let learningProgress = {
+            completedPoints: [],
+            currentPoint: 1,
+            texts: {
+                '1': '',        // Schritt 1 - Auftrag 1
+                '1_task3': '',  // Schritt 1 - Auftrag 3
+                '1_task4': '',  // Schritt 1 - Auftrag 4
+                '2': '',        // Schritt 2
+                '3': '',        // Schritt 3
+                '4': '',        // Schritt 4
+                '5': '',        // Schritt 5
+                '6': ''         // Schritt 6
+            },
+            images: {}
+        };
+
+        function loadProgress() {
+            const saved = localStorage.getItem('learningProgress');
+            if (saved) {
+                learningProgress = JSON.parse(saved);
+                
+                if (!learningProgress.texts) {
+                    learningProgress.texts = {
+                        '1': '', '1_task3': '', '1_task4': '', '2': '', '3': '', '4': '', '5': '', '6': ''
+                    };
+                }
+                
+                updateUI();
+            }
+        }
+
+        function saveProgress() {
+            localStorage.setItem('learningProgress', JSON.stringify(learningProgress));
+        }
+
+        function openPoint(pointNumber) {
+            const card = document.querySelector(`.card[data-step="${pointNumber}"]`);
+            
+            if (card && card.classList.contains('locked')) {
+                alert('🔒 Dieser Schritt ist noch nicht freigeschaltet!\nSchließe zuerst die vorherigen Schritte ab.');
+                return;
+            }
+            
+            if (pointNumber === 1 || !card || !card.classList.contains('locked')) {
+                window.location.href = `schritt${pointNumber}.html`;
+            }
+        }
+
+        function completePoint(pointNumber) {
+            if (!learningProgress.completedPoints.includes(pointNumber)) {
+                learningProgress.completedPoints.push(pointNumber);
+                learningProgress.currentPoint = pointNumber + 1;
+                saveProgress();
+                window.location.href = 'index.html';
+            }
+        }
+
+        function updateUI() {
+            for (let i = 1; i <= 6; i++) {
+                const card = document.querySelector(`.card[data-step="${i}"]`);
+                if (!card) continue;
+                
+                if (learningProgress.completedPoints.includes(i)) {
+                    card.classList.remove('locked', 'active');
+                    card.classList.add('completed');
+                    
+                    const number = card.querySelector('.card-number');
+                    if (number) number.textContent = '✓';
+                } else if (i === learningProgress.currentPoint) {
+                    card.classList.remove('locked');
+                    card.classList.add('active');
+                } else if (i < learningProgress.currentPoint) {
+                    card.classList.remove('locked');
+                } else {
+                    card.classList.add('locked');
+                }
+            }
+            
+            const totalPoints = 6;
+            const completedPoints = learningProgress.completedPoints.length;
+            const progressPercent = (completedPoints / totalPoints) * 100;
+            document.getElementById('progress-fill').style.width = progressPercent + '%';
+            document.getElementById('progress-fill').textContent = Math.round(progressPercent) + '%';
+        }
+
+        async function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.setFontSize(22);
+            doc.text('Lernjournal: Ökologie und Ökonomie', 20, 25);
+            
+            doc.setFontSize(11);
+            doc.text('Datum: ' + new Date().toLocaleDateString('de-DE'), 20, 35);
+            
+            let yPos = 50;
+            const lineHeight = 7;
+            const margin = 20;
+            const pageWidth = doc.internal.pageSize.width - 2 * margin;
+            
+            // Schritt 1: Rollenspiel (hat mehrere Aufträge)
+            const text1_1 = learningProgress.texts['1'] || '';
+            const text1_3 = learningProgress.texts['1_task3'] || '';
+            const text1_4 = learningProgress.texts['1_task4'] || '';
+            
+            if (text1_1 || text1_3 || text1_4) {
+                doc.setFontSize(14);
+                doc.setFont(undefined, 'bold');
+                doc.text('Schritt 1: Ökologie & Ökonomie (Rollenspiel)', margin, yPos);
+                yPos += lineHeight + 5;
+                
+                // Auftrag 1
+                if (text1_1.trim() !== '') {
+                    doc.setFontSize(12);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Auftrag 1: Stakeholder-Analyse', margin, yPos);
+                    yPos += lineHeight;
+                    
+                    doc.setFontSize(11);
+                    doc.setFont(undefined, 'normal');
+                    const lines1_1 = doc.splitTextToSize(text1_1, pageWidth);
+                    for (let line of lines1_1) {
+                        if (yPos > 270) {
+                            doc.addPage();
+                            yPos = 20;
+                        }
+                        doc.text(line, margin, yPos);
+                        yPos += lineHeight;
+                    }
+                    yPos += 5;
+                }
+                
+                // Auftrag 3
+                if (text1_3.trim() !== '') {
+                    if (yPos > 250) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+                    doc.setFontSize(12);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Auftrag 3: Reflexion der Debatte', margin, yPos);
+                    yPos += lineHeight;
+                    
+                    doc.setFontSize(11);
+                    doc.setFont(undefined, 'normal');
+                    const lines1_3 = doc.splitTextToSize(text1_3, pageWidth);
+                    for (let line of lines1_3) {
+                        if (yPos > 270) {
+                            doc.addPage();
+                            yPos = 20;
+                        }
+                        doc.text(line, margin, yPos);
+                        yPos += lineHeight;
+                    }
+                    yPos += 5;
+                }
+                
+                // Auftrag 4
+                if (text1_4.trim() !== '') {
+                    if (yPos > 250) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+                    doc.setFontSize(12);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Auftrag 4: Spannungsfelder Ökonomie & Ökologie', margin, yPos);
+                    yPos += lineHeight;
+                    
+                    doc.setFontSize(11);
+                    doc.setFont(undefined, 'normal');
+                    const lines1_4 = doc.splitTextToSize(text1_4, pageWidth);
+                    for (let line of lines1_4) {
+                        if (yPos > 270) {
+                            doc.addPage();
+                            yPos = 20;
+                        }
+                        doc.text(line, margin, yPos);
+                        yPos += lineHeight;
+                    }
+                }
+                
+                yPos += 10;
+                if (yPos > 250) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+            }
+            
+            // Schritt 2: Klimaveränderung (Grafikanalyse)
+            const text2 = learningProgress.texts['2'] || '';
+            if (text2.trim() !== '') {
+                doc.setFontSize(14);
+                doc.setFont(undefined, 'bold');
+                doc.text('Schritt 2: Klimaveränderung (Grafikanalyse)', margin, yPos);
+                yPos += lineHeight + 3;
+                
+                // Füge Bild ein, falls vorhanden
+                if (learningProgress.images && learningProgress.images['2']) {
+                    try {
+                        const imgData = learningProgress.images['2'];
+                        const imgWidth = 170;
+                        const imgHeight = 100;
+                        
+                        if (yPos + imgHeight > 270) {
+                            doc.addPage();
+                            yPos = 20;
+                        }
+                        
+                        doc.addImage(imgData, 'JPEG', margin, yPos, imgWidth, imgHeight);
+                        yPos += imgHeight + 10;
+                        
+                        if (yPos > 250) {
+                            doc.addPage();
+                            yPos = 20;
+                        }
+                    } catch (error) {
+                        console.error('Fehler beim Einfügen des Bildes:', error);
+                    }
+                }
+                
+                doc.setFontSize(11);
+                doc.setFont(undefined, 'normal');
+                const lines2 = doc.splitTextToSize(text2, pageWidth);
+                for (let line of lines2) {
+                    if (yPos > 270) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+                    doc.text(line, margin, yPos);
+                    yPos += lineHeight;
+                }
+                
+                yPos += 10;
+                if (yPos > 250) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+            }
+            
+            // Schritt 3: Ursachen (Hörverstehen)
+            const text3 = learningProgress.texts['3'] || '';
+            if (text3.trim() !== '') {
+                doc.setFontSize(14);
+                doc.setFont(undefined, 'bold');
+                doc.text('Schritt 3: Ursachen des Klimawandels (Hörverstehen)', margin, yPos);
+                yPos += lineHeight + 3;
+                
+                doc.setFontSize(11);
+                doc.setFont(undefined, 'normal');
+                const lines3 = doc.splitTextToSize(text3, pageWidth);
+                for (let line of lines3) {
+                    if (yPos > 270) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+                    doc.text(line, margin, yPos);
+                    yPos += lineHeight;
+                }
+                
+                yPos += 10;
+                if (yPos > 250) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+            }
+            
+            // Schritte 4, 5, 6
+            const steps = [
+                { key: '4', title: 'Schritt 4: Folgen des Klimawandels' },
+                { key: '5', title: 'Schritt 5: Biodiversität' },
+                { key: '6', title: 'Schritt 6: Handlungsmöglichkeiten' }
+            ];
+            
+            for (let step of steps) {
+                const text = learningProgress.texts[step.key] || '';
+                if (text.trim() === '') continue;
+                
+                doc.setFontSize(14);
+                doc.setFont(undefined, 'bold');
+                doc.text(step.title, margin, yPos);
+                yPos += lineHeight + 3;
+                
+                doc.setFontSize(11);
+                doc.setFont(undefined, 'normal');
+                const lines = doc.splitTextToSize(text, pageWidth);
+                
+                for (let line of lines) {
+                    if (yPos > 270) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+                    doc.text(line, margin, yPos);
+                    yPos += lineHeight;
+                }
+                
+                yPos += 10;
+                if (yPos > 250) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+            }
+            
+            doc.save('Lernjournal-Gesamt.pdf');
+        }
+
+        function downloadJSON() {
+            const dataStr = JSON.stringify(learningProgress, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'lernpfad-backup.json';
+            link.click();
+        }
+
+        function loadBackup() {
+            document.getElementById('fileInput').click();
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    learningProgress = data;
+                    saveProgress();
+                    loadProgress();
+                    alert('✓ Backup erfolgreich geladen!');
+                } catch (error) {
+                    alert('❌ Fehler beim Laden der Datei. Bitte überprüfe das Format.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadProgress();
+            updateUI();
+        });
+    </script>
+</body>
+</html>
 
